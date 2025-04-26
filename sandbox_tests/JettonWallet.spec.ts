@@ -19,7 +19,7 @@ import { Op, Errors } from '../wrappers/JettonConstants';
 
 //jetton params
 
-let fwd_fee = 1804014n, gas_consumption = 15000000n, min_tons_for_storage = 10000000n;
+let fwd_fee = BigInt(Math.ceil(1804014 / 2.5)), gas_consumption = 15000000n, min_tons_for_storage = 10000000n;
 //let fwd_fee = 1804014n, gas_consumption = 14000000n, min_tons_for_storage = 10000000n;
 
 describe('JettonWallet', () => {
@@ -382,10 +382,14 @@ describe('JettonWallet', () => {
         sendResult = await deployerJettonWallet.sendTransfer(deployer.getSender(), sentAmount,
                sentAmount, someAddress,
                deployer.address, null, forwardAmount, forwardPayload);
+        /*
+         * Excess will be present, since actual gas fees are 2.5 less than hardcoded ones
         expect(sendResult.transactions).not.toHaveTransaction({ //no excesses
             from: someJettonWallet.address,
             to: deployer.address,
+            op: Op.excesses
         });
+        */
         /*
         transfer_notification#7362d09c query_id:uint64 amount:(VarUInteger 16)
                                       sender:MsgAddress forward_payload:(Either Cell ^Cell)
@@ -500,7 +504,7 @@ describe('JettonWallet', () => {
        let initialJettonBalance   = await deployerJettonWallet.getJettonBalance();
        let initialTotalSupply     = await jettonMinter.getTotalSupply();
        let burnAmount   = toNano('0.01');
-       let fwd_fee      = 1492012n /*1500012n*/, gas_consumption = 15000000n;
+       let fwd_fee      = BigInt(Math.ceil(1492012 / 2.5)) /*1500012n*/, gas_consumption = 15000000n;
        let minimalFee   = fwd_fee + 2n*gas_consumption;
 
        const sendLow    = await deployerJettonWallet.sendBurn(deployer.getSender(), minimalFee, // ton amount
@@ -612,7 +616,7 @@ describe('JettonWallet', () => {
 
     it('Minimal discovery fee', async () => {
        // 5000 gas-units + msg_forward_prices.lump_price + msg_forward_prices.cell_price = 0.0061
-        const fwdFee     = 1464012n;
+        const fwdFee     = BigInt(Math.floor(1464012 / 2.5));
         const minimalFee = fwdFee + 10000000n; // toNano('0.0061');
 
         let discoveryResult = await jettonMinter.sendDiscovery(deployer.getSender(),
