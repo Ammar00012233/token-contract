@@ -88,19 +88,27 @@ function shr16ceil(src: bigint) {
     return res;
 }
 
-export function collectCellStats(cell: Cell, visited:Array<string>, skipRoot: boolean = false): StorageStats {
+export function reportGas(banner: string, tx: Transaction) {
+    const computed = computedGeneric(tx);
+    console.log(`${banner} took ${computed.gasUsed} gas and ${computed.vmSteps} instructions`);
+};
+
+
+export function collectCellStats(cell: Cell, visited:Array<string>, skipRoot: boolean = false, ignoreVisited = false): StorageStats {
     let bits  = skipRoot ? 0n : BigInt(cell.bits.length);
     let cells = skipRoot ? 0n : 1n;
     let hash = cell.hash().toString();
-    if (visited.includes(hash)) {
-        // We should not account for current cell data if visited
-        return new StorageStats();
-    }
-    else {
-        visited.push(hash);
+    if(!ignoreVisited) {
+        if (visited.includes(hash)) {
+            // We should not account for current cell data if visited
+            return new StorageStats();
+        }
+        else {
+            visited.push(hash);
+        }
     }
     for (let ref of cell.refs) {
-        let r = collectCellStats(ref, visited);
+        let r = collectCellStats(ref, visited, false, ignoreVisited);
         cells += r.cells;
         bits += r.bits;
     }

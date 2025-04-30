@@ -1,12 +1,12 @@
 import { Blockchain, SandboxContract, TreasuryContract, BlockchainSnapshot } from '@ton/sandbox';
-import { Cell, toNano, beginCell } from '@ton/core';
+import { Cell, toNano, beginCell, Transaction } from '@ton/core';
 import '@ton/test-utils';
 import { compile } from '@ton/blueprint';
 import { randomAddress, getRandomInt } from './utils';
 import { NewNftItem, NftCollection, nftContentToCell } from '../wrappers/NftCollection';
 import { NftItem } from '../wrappers/NftItem';
 import { Op, Errors } from '../wrappers/NftConstants';
-import { computedGeneric, computeMessageForwardFees, getMsgPrices } from './gasUtils';
+import { collectCellStats, computedGeneric, computeMessageForwardFees, getMsgPrices, reportGas } from './gasUtils';
 import { findTransactionRequired } from '@ton/test-utils';
 
 describe('NFT', () => {
@@ -29,7 +29,18 @@ describe('NFT', () => {
 
     beforeAll(async () => {
         collection_code = await compile('NftCollection');
+        let collectionStats = collectCellStats(collection_code, []);
+        console.log(`Deduplicated collection code stats: ${collectionStats.bits} bits ${collectionStats.cells} cells`);
+
+        collectionStats = collectCellStats(collection_code, [], false, true);
+        console.log(`Raw collection code takes ${collectionStats.bits} bits ${collectionStats.cells} cells`);
+
         item_code       = await compile('NftItem');
+        let itemStats = collectCellStats(item_code, [], false, true)
+        console.log(`Deduplicated item code stats: ${itemStats.bits} bits ${itemStats.cells} cells`);
+        itemStats = collectCellStats(item_code, [], false, true)
+        console.log(`Raw item code stats: ${itemStats.bits} bits ${itemStats.cells} cells`);
+
         blockchain = await Blockchain.create();
 
         blockchain.now = 1000;
@@ -86,6 +97,7 @@ describe('NFT', () => {
         let   curIdx   = collData.nextItemIndex;
 
         const iterCount = getRandomInt(5, 10);
+        let deployTx: Transaction;
 
         for(let i = 0; i < iterCount; i++) {
             let    nextItem = await nftItemByIdx(curIdx);
@@ -97,7 +109,7 @@ describe('NFT', () => {
                 content: itemContentCell
             }, curIdx);
 
-            expect(res.transactions).toHaveTransaction({
+            deployTx = findTransactionRequired(res.transactions, {
                 on: nextItem.address,
                 from: nftCollection.address,
                 aborted: false,
@@ -114,6 +126,8 @@ describe('NFT', () => {
             const dataAfter = await nftCollection.getCollectionData();
             expect(dataAfter.nextItemIndex).toEqual(++curIdx);
         }
+
+        reportGas("Item deploy", deployTx!);
 
         itemsDeployedState = blockchain.snapshot();
     });
@@ -178,11 +192,11 @@ describe('NFT', () => {
 
         const res = await nftCollection.sendDeployBatch(deployer.getSender(), items, toNano('6'));
 
-        expect(res.transactions).toHaveTransaction({
+        reportGas("Batch deploy", findTransactionRequired(res.transactions, {
             on: nftCollection.address,
             from: deployer.address,
             outMessagesCount: 100
-        });
+        }));
 
         const dataAfter = await nftCollection.getCollectionData();
         expect(dataAfter.nextItemIndex).toEqual(lastIdx);
@@ -407,13 +421,13 @@ describe('NFT', () => {
         const testQueryId    = getRandomInt(42, 142);
         const res = await deployerItem.sendTransfer(deployer.getSender(), dstAddr, royaltyWallet.address, forwardAmount, forwardPayload, forwardAmount + toNano('1'), testQueryId);
 
-        expect(res.transactions).toHaveTransaction({
+        reportGas("Item transfer", findTransactionRequired(res.transactions, {
             on: deployerItem.address,
             from: deployer.address,
             op: Op.transfer,
             outMessagesCount: 2,
             aborted: false
-        });
+        }));
 
         expect(res.transactions).toHaveTransaction({
             on: dstAddr,
@@ -744,6 +758,8 @@ describe('NFT', () => {
             aborted: false,
             outMessagesCount: 1
         });
+
+        reportGas("Get static data", getDataTx);
 
         const outMsg = getDataTx.outMessages.get(0)!;
         if(outMsg.info.type !== 'internal') {
