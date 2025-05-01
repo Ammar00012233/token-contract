@@ -110,6 +110,12 @@ describe('NFT', () => {
             }, curIdx);
 
             deployTx = findTransactionRequired(res.transactions, {
+                on: nftCollection.address,
+                from: deployer.address,
+                op: Op.deploy_item,
+                aborted: false
+            });
+            expect(res.transactions).toHaveTransaction({
                 on: nextItem.address,
                 from: nftCollection.address,
                 aborted: false,
