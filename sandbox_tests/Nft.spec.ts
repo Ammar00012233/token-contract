@@ -98,6 +98,7 @@ describe('NFT', () => {
 
         const iterCount = getRandomInt(5, 10);
         let deployTx: Transaction;
+        let itemDeployTx: Transaction;
 
         for(let i = 0; i < iterCount; i++) {
             let    nextItem = await nftItemByIdx(curIdx);
@@ -115,7 +116,8 @@ describe('NFT', () => {
                 op: Op.deploy_item,
                 aborted: false
             });
-            expect(res.transactions).toHaveTransaction({
+
+            itemDeployTx = findTransactionRequired(res.transactions, {
                 on: nextItem.address,
                 from: nftCollection.address,
                 aborted: false,
@@ -133,7 +135,8 @@ describe('NFT', () => {
             expect(dataAfter.nextItemIndex).toEqual(++curIdx);
         }
 
-        reportGas("Item deploy", deployTx!);
+        reportGas("Item deploy (on collection)", deployTx!);
+        reportGas("Item deploy receive (on item)", itemDeployTx!);
 
         itemsDeployedState = blockchain.snapshot();
     });
