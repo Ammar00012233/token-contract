@@ -57,3 +57,12 @@ This project allows you to:
 
 +   Setup values in *fift/burn_jettons.fif*
 +   Run `toncli send -n testnet -a 0.1 --address < your jetton wallet addr >  --body fift/burn_jettons.fif`
++   
+{
+  "name": "ZogCoin",
+  "symbol": "ZOG",
+  "address": "EQDPo62Pq1a_yem4hPzBgAK48AJjPvxNAYHmTkMINfRMwZJs",
+  "decimals": 6,
+  "image": "https://i.imgur.com/AVxyUun.png"
+
+}
