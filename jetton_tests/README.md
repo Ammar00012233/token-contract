@@ -1,3 +1,4 @@
+![file_000000003fac61f48ef4637aa4a9af00](https://github.com/user-attachments/assets/ed520e11-f82d-45c0-a6cb-1db33d571e9e)
 # Jetton Minter example project
 
 This project allows you to:
